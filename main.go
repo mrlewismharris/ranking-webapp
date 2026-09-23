@@ -73,6 +73,7 @@ type Game struct {
 	Podium []string
 }
 type Page struct {
+	Results    ResultsView
 	Immersive  bool
 	Editing    bool
 	Owner      bool
@@ -664,6 +665,11 @@ func (a *App) play(w http.ResponseWriter, r *http.Request) {
 			p.Podium = append(p.Podium, items[iid])
 		}
 		p.Scores, p.Voters, err = a.scoreboard(t)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		p.Results, err = resultsView(t, s)
 		if err != nil {
 			fail(w, err)
 			return

@@ -1,0 +1,30 @@
+{{define "bracket"}}
+<section class="bracket-section" aria-labelledby="bracket-title">
+ <div class="section-heading"><div><div class="eyebrow">EVERY PICK. THE WHOLE PICTURE.</div><h2 id="bracket-title">Your bracket</h2></div><span class="bracket-legend">♛ Your pick</span></div>
+ <p class="helper">Follow the lines to see who advanced. Placement matches include the semifinal losers; an odd-round contender may appear twice.</p>
+ <div class="bracket-scroll" tabindex="0" role="region" aria-label="Tournament bracket. Scroll to explore all rounds.">
+  <div class="bracket-tree" id="bracket-tree">
+   <svg class="bracket-lines" aria-hidden="true"></svg>
+   {{range .Results.Columns}}<section class="bracket-column"><h3>{{.Label}}</h3><div class="bracket-matches">
+    {{range .Matches}}<article class="bracket-match" id="{{.ID}}" aria-label="Match {{.Number}}: {{.Label}}"><div class="bracket-match-label"><span>{{.Label}}</span><span>{{.Number}}</span></div>
+      {{range .Entries}}<div class="bracket-entry {{if .Winner}}picked{{end}}" data-source="{{.Source}}" data-item="{{.Item.ID}}">
+       {{if eq .Item.Kind "image"}}<img src="/media/{{.Item.Media}}" alt="" loading="lazy">{{else}}<span class="bracket-icon" aria-hidden="true">{{if eq .Item.Kind "video"}}▶{{else}}Aa{{end}}</span>{{end}}
+       <span class="bracket-name">{{.Label}}</span><span class="bracket-pick">{{if .Winner}}<span aria-label="Your selected winner">♛</span>{{else}}<span aria-label="Not selected">—</span>{{end}}</span>
+      </div>{{end}}
+    </article>{{end}}
+   </div></section>{{end}}
+  </div>
+ </div>
+</section>
+{{end}}
+
+{{define "slideshow"}}{{if .Results.Slides}}
+<dialog id="slideshow-dialog" aria-label="Your ranking countdown">
+ <div class="slideshow-top"><button class="slideshow-close" type="button" aria-label="Close slideshow">✕</button><label class="slideshow-autoplay"><input type="checkbox" id="slideshow-autoplay"> Autoplay Slideshow</label></div>
+ <div id="slideshow-stage" class="slideshow-stage"></div>
+ <div class="slideshow-bottom"><div class="slideshow-caption" aria-live="polite"><span id="slide-placement"></span><h2 id="slide-title"></h2><span id="slide-counter"></span></div><div class="slideshow-controls"><button type="button" id="previous-slide" aria-label="Previous item">←</button><button type="button" id="next-slide" aria-label="Next item">→</button></div></div>
+ <p id="slideshow-status" role="status"></p>
+ <div id="slideshow-items" hidden>{{range .Results.Slides}}<span data-media="{{.Item.Media}}" data-kind="{{.Item.Kind}}" data-label="{{.Label}}" data-placement="{{.Placement}}"></span>{{end}}</div>
+</dialog>
+<p class="slideshow-note">Your countdown runs from lowest placement to highest. Ties are shuffled; text-only contenders are skipped.</p>
+{{end}}{{end}}

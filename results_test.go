@@ -124,7 +124,7 @@ func TestCompletedPageIncludesBracket(t *testing.T) {
 	request(a, "POST", path+"/start", "", a.start)
 	finish(t, a, tt, "a")
 	w := request(a, "GET", path+"/play", "", a.play)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), "Your bracket") || strings.Contains(w.Body.String(), "Watch your countdown") {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "Your bracket") || strings.Contains(w.Body.String(), "id=\"open-slideshow\"") {
 		t.Fatal("text-only results rendered incorrectly")
 	}
 }

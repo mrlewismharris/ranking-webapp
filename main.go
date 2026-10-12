@@ -143,7 +143,7 @@ func main() {
 	if addr == "" {
 		addr = ":8080"
 	}
-	log.Printf("Crown is ready at http://localhost%s", addr)
+	log.Printf("FreeCompare is ready at http://localhost%s", addr)
 	server := &http.Server{Addr: addr, Handler: a.middleware(mux), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 90 * time.Second}
 	log.Fatal(server.ListenAndServe())
 }
@@ -238,7 +238,7 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	p := Page{Title: "Your arena"}
+	p := Page{Title: "Home"}
 	for rows.Next() {
 		var g Game
 		var raw string
@@ -311,8 +311,11 @@ func (a *App) upload(w http.ResponseWriter, r *http.Request) {
 		ext = ".mp4"
 		kind = "video"
 	default:
-		http.Error(w, "Supported files: JPG, PNG, GIF, WebP and MP4.", 400)
-		return
+		if !isVideoUpload(h.Filename, mime) {
+			http.Error(w, "Supported files: JPG, PNG, GIF, WebP, MP4, MOV, MKV, WebM, AVI, M4V, MPEG, WMV, FLV, TS and 3GP.", 400)
+			return
+		}
+		ext, kind = ".mp4", "video"
 	}
 	mid := id()
 	path := filepath.Join("uploads", mid+ext)
@@ -328,6 +331,21 @@ func (a *App) upload(w http.ResponseWriter, r *http.Request) {
 	closeErr := out.Close()
 	if err == nil {
 		err = closeErr
+	}
+	if err == nil && kind == "video" {
+		// Keep the source private and register only a completed, playable MP4.
+		source := filepath.Join(a.data, path)
+		converted := source + ".converted.mp4"
+		defer os.Remove(converted)
+		if err = convertVideo(r.Context(), source, converted); err != nil {
+			os.Remove(source)
+			writeVideoError(w, err)
+			return
+		}
+		err = os.Remove(source)
+		if err == nil {
+			err = os.Rename(converted, source)
+		}
 	}
 	if err == nil {
 		_, err = a.db.Exec("INSERT INTO media(id,owner,path,kind) VALUES(?,?,?,?)", mid, user(r), path, kind)

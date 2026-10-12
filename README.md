@@ -1,10 +1,10 @@
-# Crown
+# FreeCompare
 
 A server-rendered ranking tournament app built with Go, `html/template`, SQLite (pure Go `modernc.org/sqlite`), and small vanilla JavaScript enhancements. No frontend build step or framework.
 
 ## Run
 
-Requires Go 1.26 or newer.
+Requires Go 1.26 or newer. Video uploads also require FFmpeg (with the libx264 encoder) and ffprobe on the server PATH. Images and text work without them. Set FFMPEG_PATH and FFPROBE_PATH to executable paths if they are installed elsewhere.
 
 ```sh
 go run .
@@ -19,22 +19,25 @@ ADDR=127.0.0.1:3000 DATA_DIR=./data go run .
 Build a standalone executable (templates and static files are embedded):
 
 ```sh
-go build -o bin/crown .
-./bin/crown
+go build -o bin/freecompare .
+./bin/freecompare
 ```
 
 ## Features
 
 - Named tournaments with descriptions, optional public creator names, and 2–256 contenders.
 - Creator-only edit links and deletion, authorized by the original browser cookie. A “Your creations” section lists owned tournaments.
-- Text, JPG, PNG, GIF, WebP, or MP4 contenders. Media titles are optional.
+- Text, JPG, PNG, GIF, WebP, or video contenders (MP4, MOV, MKV, WebM, AVI, M4V, MPEG, WMV, FLV, TS/MTS/M2TS, 3GP/3G2 and OGV). Video contents are validated with ffprobe; codec support depends on the server FFmpeg build. Media titles are optional.
 - Individual media attachment, replacement, multi-file selection, and drag-and-drop uploads.
 - Files stored in `data/uploads/`, with metadata and paths in `data/bracket.db`.
-- Media endpoint supports byte ranges for video seeking. MP4 playback requires a browser-supported codec (H.264 is a widely supported choice); no transcoding is performed.
+- Video uploads are converted to browser-compatible H.264 MP4 with fast-start playback. Existing 8-bit YUV 4:2:0 H.264 video is remuxed without re-encoding (no added video quality loss); AAC audio is also copied. Other video uses libx264, CRF 16, slow preset and YUV 4:2:0; other audio becomes 256 kbps AAC. Re-encoding is high quality, but not mathematically lossless: changing codecs, bit depth, chroma format or audio encoding can introduce loss. No resolution reduction or forced frame rate is applied; odd dimensions are padded by one pixel. The first non-cover-art video and first audio stream are kept; additional tracks/subtitles are omitted. HDR inputs are not tone-mapped. Existing uploads are unchanged.
+- Conversion happens before an upload appears in the contender list, with two jobs at a time and a 15-minute deadline (including queue time). Failed conversions remove their files. Converted files can be larger than the source. The 64 MB limit applies to the uploaded source.
+- Media endpoint supports byte ranges for video seeking.
+- Black terminal theme with monospace typography, green accents and square controls.
 - Permanent tournament links, with an independent randomized bracket for each visitor.
 - Anonymous, HttpOnly, SameSite cookie identifies the browser for one year. SQLite saves every vote. Clearing cookies or changing browsers creates a separate identity.
 - Home page lists your started and completed tournaments. Tournament pages offer continue, view results, or start fresh. Restart replaces current progress; the last completed public ballot remains until the next completion.
-- Full-viewport side-by-side cards with a tiny exit/logo link, crown voting, hover-loop video previews, touch play/pause, and a full-viewport media lightbox.
+- Full-viewport side-by-side cards with a tiny exit/logo link, choice buttons, hover-loop video previews, touch play/pause, and a full-viewport media lightbox.
 - Responsive layout, keyboard focus styling, transition animations, and reduced-motion support.
 - Stale vote protection prevents duplicate submissions from advancing another matchup.
 
@@ -54,11 +57,13 @@ go test -race ./...
 go vet ./...
 ```
 
+When FFmpeg and ffprobe are available, tests also convert real MOV, WebM, AVI, MKV and MP4 fixtures, verify lossless H.264 stream copy, test converted-video ranges, and check invalid video cleanup. These integration tests skip when the tools are absent.
+
 Tests cover all sizes from 2 through 256, odd-round pairing, exact four-player placements, invalid/stale votes, persistence, restart, HTML rendering, media range requests, and cross-origin rejection.
 
 ## Storage and deployment notes
 
-Keep the entire data directory on persistent storage. Back up SQLite using a SQLite-aware backup, or stop the app before copying the database and uploaded files together. No accounts, moderation, transcoding, or upload garbage collection are included. Abandoned, replaced, and deleted tournament uploads remain on disk. Deleting a tournament revokes public access to its media; the original uploader can still access unclaimed uploads. Creator drafts themselves are kept in memory until creation.
+Keep the entire data directory on persistent storage. Back up SQLite using a SQLite-aware backup, or stop the app before copying the database and uploaded files together. No accounts, moderation, or upload garbage collection are included. Abandoned, replaced, and deleted tournament uploads remain on disk. Deleting a tournament revokes public access to its media; the original uploader can still access unclaimed uploads. Creator drafts themselves are kept in memory until creation.
 
 Use an HTTPS reverse proxy for public hosting. Uploads are limited to 64 MB per file, but this initial version does not impose user quotas or rate limits. The app defaults to listening on all interfaces at port 8080; set `ADDR=127.0.0.1:8080` to bind only locally.
 

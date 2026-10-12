@@ -184,7 +184,7 @@ func TestPersistenceRestartAndStaleVotes(t *testing.T) {
 		t.Fatal("restart did not replace progress")
 	}
 	w = request(a, "GET", path+"/play", "", a.play)
-	if !strings.Contains(w.Body.String(), "Crown this one") {
+	if !strings.Contains(w.Body.String(), "Choose</button>") {
 		t.Fatal("missing matchup")
 	}
 }

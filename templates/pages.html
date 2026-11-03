@@ -12,6 +12,12 @@
 
 {{define "home"}}{{template "head" .}}
 <section class="intro"><h1>Rank your choices</h1><p>Add names, images or videos, then choose between pairs to find your favourite.</p><a class="button" href="/new">Create tournament</a></section>
+<section class="arena-section" aria-labelledby="latest-heading">
+ <div class="section-heading"><h2 id="latest-heading">Latest tournaments <span class="count">{{len .Latest}}</span></h2></div>
+ {{if .Latest}}<div class="game-grid">{{range .Latest}}
+ <a class="game-card" href="/t/{{.ID}}"><h3>{{.Name}}</h3><p>{{.Count}} choices{{if .Creator}} · Created by {{.Creator}}{{end}}</p><div class="game-bottom">View tournament</div></a>
+ {{end}}</div>{{else}}<p>No tournaments yet. Create the first one!</p>{{end}}
+</section>
 <section class="arena-section">
  <div class="section-heading"><h2>Your tournaments <span class="count">{{len .Games}}</span></h2></div>
  {{if .Games}}<div class="game-grid">{{range .Games}}
@@ -27,6 +33,7 @@
  {{if .Editing}}<div id="existing-items" hidden>{{range .Tournament.Items}}<span data-id="{{.ID}}" data-title="{{.Title}}" data-media="{{.Media}}" data-kind="{{.Kind}}"></span>{{end}}</div>{{end}}
  <section class="panel details-panel">
   <div class="panel-title"><h2>Details</h2></div>
+  <p class="helper">Tournaments are public and appear on the homepage for everyone.</p>
   <label for="name">Tournament name <span class="required">*</span></label><input id="name" name="name" value="{{.Tournament.Name}}" maxlength="120" required placeholder="e.g. Favourite films" autocomplete="off">
   <label for="creator">Your name <span class="optional">optional · public</span></label><input id="creator" name="creator" maxlength="80" value="{{.Tournament.Creator}}">
   <label for="description">Description <span class="optional">optional</span></label><textarea id="description" name="description" maxlength="1000" rows="3">{{.Tournament.Description}}</textarea>

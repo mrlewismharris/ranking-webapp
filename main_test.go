@@ -137,6 +137,59 @@ func request(a *App, method, path, body string, handler http.HandlerFunc) *httpt
 	a.middleware(handler).ServeHTTP(w, r)
 	return w
 }
+
+func TestHomeDiscoversTournamentsAcrossVisitors(t *testing.T) {
+	a := testApp(t)
+	home := func(cookie string) string {
+		t.Helper()
+		r := httptest.NewRequest("GET", "/", nil)
+		if cookie != "" {
+			r.AddCookie(&http.Cookie{Name: "crown_session", Value: strings.Repeat(cookie, 48)})
+		}
+		w := httptest.NewRecorder()
+		a.middleware(http.HandlerFunc(a.home)).ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("home: %d %s", w.Code, w.Body.String())
+		}
+		return w.Body.String()
+	}
+	if !strings.Contains(home(""), "No tournaments yet.") {
+		t.Fatal("missing empty discovery state")
+	}
+	older := fixture(t, a)
+	newer := fixture(t, a)
+	// Different creators, with creation dates deliberately opposite insertion order.
+	for _, entry := range []struct{ id, owner, name, date string }{
+		{older.ID, "a", "Older tournament", "2026-11-01 10:00:00"},
+		{newer.ID, "b", "Newest tournament", "2026-10-31 10:00:00"},
+	} {
+		if _, err := a.db.Exec("UPDATE tournaments SET owner=?,name=?,created=? WHERE id=?", strings.Repeat(entry.owner, 48), entry.name, entry.date, entry.id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, visitor := range []string{"", "a", "b", "c"} {
+		body := home(visitor)
+		latest, _, ok := strings.Cut(body, "Your tournaments")
+		first := strings.Index(latest, `href="/t/`+older.ID+`"`)
+		second := strings.Index(latest, `href="/t/`+newer.ID+`"`)
+		if !ok || first < 0 || second <= first || !strings.Contains(latest, "4 choices · Created by Paige") {
+			t.Fatalf("visitor %q cannot discover all tournaments in creation order", visitor)
+		}
+		if visitor == "" || visitor == "c" {
+			if strings.Contains(body, "Created by you") || strings.Contains(body, "/edit") {
+				t.Fatal("discovery exposed another creator's management links")
+			}
+		}
+	}
+	w := request(a, "POST", "/t/"+older.ID+"/delete", "confirm=delete&version=1", a.deleteTournament)
+	if w.Code != http.StatusSeeOther {
+		t.Fatal(w.Body.String())
+	}
+	if strings.Contains(home(""), `href="/t/`+older.ID+`"`) {
+		t.Fatal("deleted tournament still appears in discovery")
+	}
+}
+
 func TestPersistenceRestartAndStaleVotes(t *testing.T) {
 	a := testApp(t)
 	w := request(a, "POST", "/api/tournaments", `{"name":"Food","items":[{"title":"Pizza"},{"title":"Pasta"},{"title":"Rice"},{"title":"Tacos"}]}`, a.create)

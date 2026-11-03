@@ -82,6 +82,7 @@ type Page struct {
 	Editing    bool
 	Owner      bool
 	Created    []Tournament
+	Latest     []Tournament
 	Scores     []Score
 	Voters     int
 	Title      string
@@ -277,6 +278,31 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		p.Created = append(p.Created, t)
+	}
+	if err = created.Err(); err != nil {
+		fail(w, err)
+		return
+	}
+	created.Close()
+	latest, err := a.db.Query(`SELECT t.id,t.name,t.creator,count(i.id)
+ FROM tournaments t LEFT JOIN items i ON i.tournament=t.id
+ GROUP BY t.id ORDER BY t.created DESC,t.rowid DESC`)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	defer latest.Close()
+	for latest.Next() {
+		var t Tournament
+		if err = latest.Scan(&t.ID, &t.Name, &t.Creator, &t.Count); err != nil {
+			fail(w, err)
+			return
+		}
+		p.Latest = append(p.Latest, t)
+	}
+	if err = latest.Err(); err != nil {
+		fail(w, err)
+		return
 	}
 	a.render(w, "home", p)
 }

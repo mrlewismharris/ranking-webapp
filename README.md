@@ -59,7 +59,7 @@ go build -o bin/freecompare .
 - Black terminal theme with monospace typography, green accents and square controls.
 - Permanent tournament links, with an independent randomized bracket for each visitor.
 - Anonymous, HttpOnly, SameSite cookie identifies the browser for one year. SQLite saves every vote. Clearing cookies or changing browsers creates a separate identity.
-- Home page lists your started and completed tournaments. Tournament pages offer continue, view results, or start fresh. Restart replaces current progress; the last completed public ballot remains until the next completion.
+- Home page shows all tournaments to every visitor, newest first, alongside your started and completed tournaments and your creations. New tournaments appear on the next page load. Tournament pages offer continue, view results, or start fresh. Restart replaces current progress; the last completed public ballot remains until the next completion.
 - Full-viewport side-by-side cards with a tiny exit/logo link, choice buttons, exclusive video playback, touch play/pause, and a full-viewport media lightbox.
 - Start as Tournament, Start Normal (one pass), or Start Endless Mode (reshuffled passes). All modes save your progress.
 - Responsive layout, keyboard focus styling, transition animations, and reduced-motion support.

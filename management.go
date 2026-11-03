@@ -47,7 +47,7 @@ func migrate(db *sql.DB) error {
  CREATE TABLE IF NOT EXISTS results(tournament TEXT NOT NULL REFERENCES tournaments(id),user TEXT NOT NULL,state TEXT NOT NULL,updated TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(tournament,user));
  INSERT OR IGNORE INTO votes(tournament,user,run,revision,a,b,winner)
  SELECT g.tournament,g.user,coalesce(json_extract(g.state,'$.Run'),''),json_extract(g.state,'$.Revision')-json_array_length(g.state,'$.History')+CAST(h.key AS INTEGER)+1,json_extract(h.value,'$.A'),json_extract(h.value,'$.B'),json_extract(h.value,'$.Winner') FROM games g,json_each(g.state,'$.History') h;
- INSERT OR IGNORE INTO results(tournament,user,state) SELECT tournament,user,state FROM games WHERE json_extract(state,'$.Phase')='done';`)
+ INSERT OR IGNORE INTO results(tournament,user,state) SELECT tournament,user,state FROM games WHERE json_extract(state,'$.Phase')='done' AND coalesce(json_extract(state,'$.Mode'),'tournament') NOT IN ('normal','endless');`)
 	return err
 }
 

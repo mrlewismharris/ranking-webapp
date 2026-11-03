@@ -52,6 +52,8 @@ type Match struct {
 	Winner string
 }
 type State struct {
+	Mode        string
+	Entrants    []string
 	Run         string
 	Round       int
 	Phase       string
@@ -65,6 +67,7 @@ type State struct {
 	Finalists   []string
 }
 type Game struct {
+	Mode   string
 	ID     string
 	Name   string
 	Phase  string
@@ -252,6 +255,7 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		g.Phase = s.Phase
+		g.Mode = s.Mode
 		g.Round = s.Round
 		p.Games = append(p.Games, g)
 	}
@@ -476,6 +480,9 @@ func advance(s *State, winner string) error {
 	if s.Phase == "done" || s.Index >= len(s.Matches) {
 		return errors.New("no active match")
 	}
+	if s.Mode == "normal" || s.Mode == "endless" {
+		return advanceComparison(s, winner)
+	}
 	if s.Phase == "consolation" {
 		if err := advance(s.Consolation, winner); err != nil {
 			return err
@@ -595,6 +602,14 @@ func (a *App) start(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", 400)
 		return
 	}
+	mode := r.FormValue("mode")
+	if mode == "" {
+		mode = "tournament"
+	}
+	if mode != "tournament" && mode != "normal" && mode != "endless" {
+		http.Error(w, "Choose a valid play mode.", 400)
+		return
+	}
 	tx, err := a.db.Begin()
 	if err != nil {
 		fail(w, err)
@@ -643,9 +658,14 @@ func (a *App) start(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		shuffle(ids)
-		s = State{Revision: s.Revision + 1, Run: id()}
-		buildRound(&s, ids)
+		s = State{Mode: mode, Revision: s.Revision + 1, Run: id()}
+		if mode == "tournament" {
+			shuffle(ids)
+			buildRound(&s, ids)
+		} else {
+			s.Entrants = ids
+			buildComparisonPass(&s)
+		}
 		data, _ := json.Marshal(s)
 		if _, err = tx.Exec("INSERT INTO games(user,tournament,state) VALUES(?,?,?) ON CONFLICT(user,tournament) DO UPDATE SET state=excluded.state,updated=CURRENT_TIMESTAMP", user(r), tid, string(data)); err != nil {
 			fail(w, err)
@@ -679,6 +699,10 @@ func (a *App) play(w http.ResponseWriter, r *http.Request) {
 		items[i.ID] = i
 	}
 	if s.Phase == "done" {
+		if s.Mode == "normal" {
+			a.render(w, "comparison-done", p)
+			return
+		}
 		for _, iid := range s.Podium {
 			p.Podium = append(p.Podium, items[iid])
 		}
@@ -726,17 +750,22 @@ func (a *App) vote(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/t/"+r.PathValue("id")+"/play", 303)
 		return
 	}
+	// Endless mode replaces its pass at the boundary, so capture the voted pair first.
+	var match Match
+	if s.Phase != "done" && s.Index < len(s.Matches) {
+		match = s.Matches[s.Index]
+		match.Winner = r.FormValue("winner")
+	}
 	if err = advance(&s, r.FormValue("winner")); err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	match := s.History[len(s.History)-1]
 	if _, err = tx.Exec("INSERT INTO votes(tournament,user,run,revision,a,b,winner) VALUES(?,?,?,?,?,?,?)", r.PathValue("id"), user(r), s.Run, s.Revision, match.A, match.B, match.Winner); err != nil {
 		fail(w, err)
 		return
 	}
 	next, _ := json.Marshal(s)
-	if s.Phase == "done" {
+	if s.Phase == "done" && s.Mode != "normal" && s.Mode != "endless" {
 		if _, err = tx.Exec("INSERT INTO results(tournament,user,state) VALUES(?,?,?) ON CONFLICT(tournament,user) DO UPDATE SET state=excluded.state,updated=CURRENT_TIMESTAMP", r.PathValue("id"), user(r), string(next)); err != nil {
 			fail(w, err)
 			return

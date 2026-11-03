@@ -37,7 +37,8 @@ go build -o bin/freecompare .
 - Permanent tournament links, with an independent randomized bracket for each visitor.
 - Anonymous, HttpOnly, SameSite cookie identifies the browser for one year. SQLite saves every vote. Clearing cookies or changing browsers creates a separate identity.
 - Home page lists your started and completed tournaments. Tournament pages offer continue, view results, or start fresh. Restart replaces current progress; the last completed public ballot remains until the next completion.
-- Full-viewport side-by-side cards with a tiny exit/logo link, choice buttons, hover-loop video previews, touch play/pause, and a full-viewport media lightbox.
+- Full-viewport side-by-side cards with a tiny exit/logo link, choice buttons, exclusive video playback, touch play/pause, and a full-viewport media lightbox.
+- Start as Tournament, Start Normal (one pass), or Start Endless Mode (reshuffled passes). All modes save your progress.
 - Responsive layout, keyboard focus styling, transition animations, and reduced-motion support.
 - Stale vote protection prevents duplicate submissions from advancing another matchup.
 
@@ -48,6 +49,36 @@ The initial contenders are shuffled once and each round’s matchups are persist
 For each odd round (including three contenders), a random entrant plays a second matchup against the unpaired entrant. A contender who wins either matchup advances **once**, even if they win both. This means a repeated entrant can advance despite losing their other matchup.
 
 At four contenders, there are two semifinals, a third/fourth-place match between the losers, and a first/second-place final between the winners. At three, the odd-round rule still applies: two distinct winners play a final; if one contender wins both matches, the other two play for silver and bronze. If an earlier odd round reduces directly to two finalists, the eliminated contenders play placement matches before the final. Two-item tournaments have only first and second place. These rules ensure a unique podium and termination for all supported sizes.
+
+## Normal and Endless modes
+
+Choose a mode on the tournament page. **Start Normal** shuffles all contenders into random pairs and finishes after that single pass, without elimination or placement matches. Each contender appears once; an odd count repeats one randomly selected contender to pair with the last one. These modes support images and text as well as videos.
+
+**Start Endless Mode** uses the same pairing rules, then shuffles all contenders into a new pass when the current one ends. Draws minimize repeated opponents from the previous pass; with only two or three contenders some repeated pairs are unavoidable. Progress resumes at the saved pair and pass. Endless saved state retains only the current pass; individual votes remain in SQLite.
+
+Normal and Endless choices are recorded but do not contribute to the public tournament scoreboard or replace your last completed tournament result. Starting any mode replaces your current in-progress session for that tournament.
+
+## Comparison keyboard controls
+
+- **Left / Right arrow:** choose the left / right contender.
+- **Space:** switch the playing video, pausing the previous clip and keeping its position. If there is just one video, Space resumes it.
+- **Up / Down arrow:** raise / lower volume by 20 percentage points, clamped to 0–100%, with a small temporary percentage display. Changing volume also unmutes the clip unless the volume is zero.
+
+The left video starts first (or the only video in a mixed pair). Only one clip plays at a time. Click or tap a video to pause or resume it. Shortcuts also work in the expanded media view, where Space switches the expanded clip. Seek sliders retain their normal arrow-key behavior when focused. Sound settings carry between matchups in the same browser. Initial playback is muted; browsers may also require muted autoplay before a user interaction.
+
+## Reset all app data
+
+Stop the app, then run the script for your platform:
+
+```sh
+bash clean.sh
+```
+
+```bat
+clean.bat
+```
+
+Both permanently remove `data/bracket.db`, its SQLite sidecar files, and `data/uploads/`, including all tournaments, progress, votes and uploaded files. The app recreates empty storage on its next start. Other files in the data directory are preserved. The default data directory is relative to the script, so the scripts can be launched from another directory. If you use `DATA_DIR`, set the same environment variable when cleaning; relative custom paths resolve from your current working directory, as they do for the app.
 
 ## Check
 

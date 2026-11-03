@@ -15,7 +15,7 @@
 <section class="arena-section">
  <div class="section-heading"><h2>Your tournaments <span class="count">{{len .Games}}</span></h2></div>
  {{if .Games}}<div class="game-grid">{{range .Games}}
- <a class="game-card" href="/t/{{.ID}}"><div class="game-top"><span class="badge {{if eq .Phase "done"}}complete{{end}}">{{if eq .Phase "done"}}Completed{{else}}In progress{{end}}</span></div><h3>{{.Name}}</h3><p>{{.Count}} choices{{if ne .Phase "done"}} · Round {{.Round}}{{end}}</p><div class="game-bottom">{{if eq .Phase "done"}}View results{{else}}Continue{{end}}</div></a>
+ <a class="game-card" href="/t/{{.ID}}"><div class="game-top"><span class="badge {{if eq .Phase "done"}}complete{{end}}">{{if eq .Phase "done"}}Completed{{else}}In progress{{end}}</span></div><h3>{{.Name}}</h3><p>{{.Count}} choices · {{if eq .Mode "normal"}}Normal{{else if eq .Mode "endless"}}Endless · Pass {{.Round}}{{else}}Tournament{{if ne .Phase "done"}} · Round {{.Round}}{{end}}{{end}}</p><div class="game-bottom">{{if eq .Phase "done"}}{{if eq .Mode "normal"}}View completion{{else}}View results{{end}}{{else}}Continue{{end}}</div></a>
  {{end}}</div>{{else}}<p>No tournaments started yet.</p>{{end}}
 </section>
 {{if .Created}}<section class="created-section"><h2>Created by you</h2><div class="created-list">{{range .Created}}<article><a href="/t/{{.ID}}">{{.Name}}</a><a class="text-link" href="/t/{{.ID}}/edit">Edit</a></article>{{end}}</div></section>{{end}}
@@ -57,9 +57,11 @@
  <div class="preview-strip">{{range .Tournament.Items}}<div class="preview-item">{{template "thumb" .}}{{if and .Media .Title}}<span class="preview-title">{{.Title}}</span>{{end}}</div>{{end}}</div>
  <section class="start-panel">
   {{if .State.Phase}}
-   {{if eq .State.Phase "done"}}<a class="button" href="/t/{{.Tournament.ID}}/play">View results</a>{{else}}<a class="button" href="/t/{{.Tournament.ID}}/play">Continue tournament</a>{{end}}
-   <form action="/t/{{.Tournament.ID}}/start" method="post" class="restart-form"><input type="hidden" name="restart" value="yes"><button class="text-link" type="submit">Start again</button><small>Resets your progress. Your completed result stays until you finish again.</small></form>
-  {{else}}<p>Choose your favourite in each pair. Your progress is saved.</p><form action="/t/{{.Tournament.ID}}/start" method="post"><button class="button" type="submit">Start tournament</button></form>{{end}}
+   {{if eq .State.Phase "done"}}<a class="button" href="/t/{{.Tournament.ID}}/play">{{if eq .State.Mode "normal"}}View completion{{else}}View results{{end}}</a>{{else}}<a class="button" href="/t/{{.Tournament.ID}}/play">Continue {{if eq .State.Mode "normal"}}Normal{{else if eq .State.Mode "endless"}}Endless Mode{{else}}tournament{{end}}</a>{{end}}
+   <p class="restart-note">Starting a mode replaces your current progress. Your completed tournament result stays until you complete another tournament.</p>
+  {{else}}<p>Choose your favourite in each pair. Your progress is saved.</p>{{end}}
+  <form action="/t/{{.Tournament.ID}}/start" method="post" class="mode-actions">{{if .State.Phase}}<input type="hidden" name="restart" value="yes">{{end}}<button class="button" type="submit" name="mode" value="tournament">Start as Tournament</button><button class="button secondary" type="submit" name="mode" value="normal">Start Normal</button><button class="button secondary" type="submit" name="mode" value="endless">Start Endless Mode</button></form>
+  <p class="mode-description">Tournament finds a winner. Normal compares every choice once. Endless reshuffles after every pass. Odd counts repeat one choice per pass.</p>
   <button class="share-button text-link" type="button" data-url="/t/{{.Tournament.ID}}">Copy tournament link</button>
  </section>
  <details class="tournament-rules"><summary>Tournament rules</summary><p>Choices are paired at random. With an odd number, one choice appears in two pairs and advances if it wins either. Placement matches decide the top four.</p></details>
@@ -67,14 +69,19 @@
 
 {{define "contender"}}
 <article class="contender {{.Kind}}" data-item="{{.ID}}">
- {{if eq .Kind "image"}}<img src="/media/{{.Media}}" alt="{{if .Title}}{{.Title}}{{else}}Image{{end}}">{{else if eq .Kind "video"}}<video src="/media/{{.Media}}#t=0.001" muted loop playsinline preload="auto"></video><span class="video-hint">Hover to play · Tap to pause</span>{{else}}<div class="text-contender">{{.Title}}</div>{{end}}
+ {{if eq .Kind "image"}}<img src="/media/{{.Media}}" alt="{{if .Title}}{{.Title}}{{else}}Image{{end}}">{{else if eq .Kind "video"}}<video src="/media/{{.Media}}#t=0.001" muted loop playsinline preload="auto"></video><span class="video-hint">Space: switch clip · ↑ / ↓: volume · Tap: play/pause</span>{{else}}<div class="text-contender">{{.Title}}</div>{{end}}
  <button class="vote-button" type="submit" name="winner" value="{{.ID}}" aria-label="Choose {{if .Title}}{{.Title}}{{else}}this choice{{end}} as winner">Choose</button>
  {{if .Media}}<button class="expand-button" type="button" data-media="{{.Media}}" data-kind="{{.Kind}}" aria-label="Expand media">⛶</button>{{if .Title}}<div class="contender-title">{{.Title}}</div>{{end}}{{end}}
 </article>{{end}}
 
 {{define "play"}}{{template "head" .}}
-<section class="match-heading"><h1>Choose your favourite</h1><p>{{.Tournament.Name}} · Match {{.Played}} of {{.Total}}</p><progress value="{{.State.Index}}" max="{{.Total}}" aria-label="Current round progress"></progress></section>
+<section class="match-heading"><h1>Choose your favourite</h1><p>{{.Tournament.Name}}{{if eq .State.Mode "endless"}} · Endless · Pass {{.State.Round}}{{else if eq .State.Mode "normal"}} · Normal{{end}} · Match {{.Played}} of {{.Total}}</p><p>← Choose left · → Choose right · Space switches videos · ↑ / ↓ adjusts volume by 20%</p><progress value="{{.State.Index}}" max="{{.Total}}" aria-label="Current round progress"></progress></section>
 <form class="matchup" action="/t/{{.Tournament.ID}}/vote" method="post"><input type="hidden" name="revision" value="{{.State.Revision}}"><input type="hidden" name="run" value="{{.State.Run}}">{{template "contender" .Left}}<span class="vs match-vs">VS</span>{{template "contender" .Right}}</form>
+<div id="volume-status" class="volume-status" role="status" aria-live="polite" hidden></div>
+{{template "foot" .}}{{end}}
+
+{{define "comparison-done"}}{{template "head" .}}
+<section class="results"><h1>All comparisons complete</h1><p>{{.Tournament.Name}} · You’ve compared all {{.Tournament.Count}} choices.</p><div class="result-actions"><a class="button" href="/t/{{.Tournament.ID}}">Choose a mode</a><a class="text-link" href="/">Home</a></div></section>
 {{template "foot" .}}{{end}}
 
 {{define "results"}}{{template "head" .}}

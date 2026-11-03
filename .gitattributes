@@ -1,0 +1,2 @@
+clean.sh text eol=lf
+clean.bat text eol=crlf

@@ -131,6 +131,11 @@ body.immersive,.contender>video,.preview-item video,.podium-image video,.score-t
 @media(max-width:650px){.nav{height:76px}.brand{font-size:21px}.hero{gap:30px;padding:36px 0}.hero-copy h1{font-size:clamp(34px,8vw,48px)}.hero-art{height:auto;min-height:0;max-width:none;transform:none}.terminal-session{font-size:11px}.terminal-session p{font-size:11px}.terminal-tree{margin:18px 0}.button{white-space:normal}.nav .button{white-space:nowrap}.nav nav{gap:10px}.page-heading h1{font-size:36px}.hero-copy p{font-size:13px}}
 
 /* Compact, plain-language pages. */
+.mode-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:20px 0}
+.mode-description,.restart-note{font-size:11px;max-width:620px;margin:12px auto;line-height:1.8}
+.volume-status{position:fixed;z-index:20;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#000d;border:1px solid var(--line);color:var(--accent);padding:7px 12px;font-size:12px;pointer-events:none}
+.volume-status[hidden]{display:none}
+.contender.is-playing .video-hint{opacity:.5}
 main{min-height:calc(100dvh - 84px)}
 .intro{padding:38px 0 34px;max-width:690px}
 .intro h1,.page-heading h1,.landing h1,.results h1{font-size:clamp(26px,3.3vw,38px);letter-spacing:-.04em;margin:0 0 14px;line-height:1.25}

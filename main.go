@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "modernc.org/sqlite"
 )
 
@@ -104,6 +105,9 @@ func id() string {
 	return hex.EncodeToString(b)
 }
 func main() {
+	if err := godotenv.Load(".env"); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Fatalf("Could not load .env: %v", err)
+	}
 	data := os.Getenv("DATA_DIR")
 	if data == "" {
 		data = "data"

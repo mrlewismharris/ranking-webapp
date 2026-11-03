@@ -2,7 +2,10 @@ module compare-app
 
 go 1.26.2
 
-require modernc.org/sqlite v1.59.0
+require (
+	github.com/joho/godotenv v1.5.1
+	modernc.org/sqlite v1.59.0
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

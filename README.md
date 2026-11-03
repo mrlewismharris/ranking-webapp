@@ -10,11 +10,34 @@ Requires Go 1.26 or newer. Video uploads also require FFmpeg (with the libx264 e
 go run .
 ```
 
-Open http://localhost:8080. Optional configuration:
+Open http://localhost:8080. On a fresh checkout, copy `.env.example` to `.env` in the app's root directory:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Or in Bash:
+
+```sh
+cp .env.example .env
+```
+
+Edit `.env` to choose a port and storage directory:
+
+```dotenv
+ADDR=:3000
+DATA_DIR=./data
+```
+
+Run `go run .` from that directory and open http://localhost:3000. Restart after changing `.env`. `ADDR=127.0.0.1:3000` restricts connections to your own computer. `.env.example` also documents optional `FFMPEG_PATH` and `FFPROBE_PATH` settings, comments and quoted paths. Local `.env` files and variants such as `.env.local` are ignored by Git; `.env.example` is committed as the shared template.
+
+The app reads `.env` from the **current working directory**, including when using the compiled executable. A missing `.env` uses the existing defaults; an unreadable or malformed file stops startup with an error. Existing environment variables override `.env`, so shell or deployment configuration still works:
 
 ```sh
 ADDR=127.0.0.1:3000 DATA_DIR=./data go run .
 ```
+
+If you previously set `$env:ADDR` in PowerShell, run `Remove-Item Env:ADDR` to let `.env` control the address in that terminal.
 
 Build a standalone executable (templates and static files are embedded):
 
@@ -78,7 +101,7 @@ bash clean.sh
 clean.bat
 ```
 
-Both permanently remove `data/bracket.db`, its SQLite sidecar files, and `data/uploads/`, including all tournaments, progress, votes and uploaded files. The app recreates empty storage on its next start. Other files in the data directory are preserved. The default data directory is relative to the script, so the scripts can be launched from another directory. If you use `DATA_DIR`, set the same environment variable when cleaning; relative custom paths resolve from your current working directory, as they do for the app.
+Both permanently remove `data/bracket.db`, its SQLite sidecar files, and `data/uploads/`, including all tournaments, progress, votes and uploaded files. The app recreates empty storage on its next start. Other files in the data directory are preserved. The default data directory is relative to the script, so the scripts can be launched from another directory. The cleanup scripts do not read `.env`. If you customize `DATA_DIR` in `.env`, set that same environment variable when cleaning; relative custom paths resolve from your current working directory, as they do for the app. For example, in PowerShell, use `$env:DATA_DIR = './custom-data'` before running `clean.bat`.
 
 ## Check
 

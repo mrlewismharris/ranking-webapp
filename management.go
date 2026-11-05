@@ -44,9 +44,10 @@ func migrate(db *sql.DB) error {
 		}
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS votes(tournament TEXT NOT NULL REFERENCES tournaments(id),user TEXT NOT NULL,run TEXT NOT NULL,revision INTEGER NOT NULL,a TEXT NOT NULL,b TEXT NOT NULL,winner TEXT NOT NULL,created TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(tournament,user,run,revision));
+ CREATE TABLE IF NOT EXISTS game_steps(tournament TEXT NOT NULL REFERENCES tournaments(id),user TEXT NOT NULL,run TEXT NOT NULL,revision INTEGER NOT NULL,state TEXT NOT NULL,PRIMARY KEY(tournament,user,run,revision));
  CREATE TABLE IF NOT EXISTS results(tournament TEXT NOT NULL REFERENCES tournaments(id),user TEXT NOT NULL,state TEXT NOT NULL,updated TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(tournament,user));
  INSERT OR IGNORE INTO votes(tournament,user,run,revision,a,b,winner)
- SELECT g.tournament,g.user,coalesce(json_extract(g.state,'$.Run'),''),json_extract(g.state,'$.Revision')-json_array_length(g.state,'$.History')+CAST(h.key AS INTEGER)+1,json_extract(h.value,'$.A'),json_extract(h.value,'$.B'),json_extract(h.value,'$.Winner') FROM games g,json_each(g.state,'$.History') h;
+ SELECT g.tournament,g.user,coalesce(json_extract(g.state,'$.Run'),''),json_extract(g.state,'$.Revision')-json_array_length(g.state,'$.History')+CAST(h.key AS INTEGER)+1,json_extract(h.value,'$.A'),json_extract(h.value,'$.B'),json_extract(h.value,'$.Winner') FROM games g,json_each(g.state,'$.History') h WHERE coalesce(json_extract(g.state,'$.UndoReady'),0)=0;
  INSERT OR IGNORE INTO results(tournament,user,state) SELECT tournament,user,state FROM games WHERE json_extract(state,'$.Phase')='done' AND coalesce(json_extract(state,'$.Mode'),'tournament') NOT IN ('normal','endless');`)
 	return err
 }
@@ -191,7 +192,7 @@ func (a *App) edit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if changed {
-		for _, table := range []string{"games", "votes", "results", "items"} {
+		for _, table := range []string{"game_steps", "games", "votes", "results", "items"} {
 			if _, err = tx.Exec("DELETE FROM "+table+" WHERE tournament=?", tid); err != nil {
 				fail(w, err)
 				return
@@ -247,7 +248,7 @@ func (a *App) deleteTournament(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	for _, table := range []string{"games", "votes", "results", "items"} {
+	for _, table := range []string{"game_steps", "games", "votes", "results", "items"} {
 		if _, err = tx.Exec("DELETE FROM "+table+" WHERE tournament=?", tid); err != nil {
 			fail(w, err)
 			return

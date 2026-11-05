@@ -9,6 +9,10 @@ body.immersive{height:100dvh;overflow:hidden;background:#111}
 .immersive .contender.not-selected{transform:none;opacity:.25}
 .immersive .play-heading,.immersive .match-heading,.immersive .match-instruction{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .arena-logo{position:fixed;z-index:5;top:max(12px,env(safe-area-inset-top));left:max(14px,env(safe-area-inset-left));font-size:16px;letter-spacing:-.7px;line-height:1.2;font-weight:800;color:#fff;text-shadow:0 1px 8px #000;background:#1117;border-radius:4px;padding:5px 8px}
+.arena-nav{position:fixed;z-index:5;top:max(12px,env(safe-area-inset-top));left:max(14px,env(safe-area-inset-left));display:flex;align-items:center;gap:12px}
+.arena-nav .arena-logo{position:static}
+.undo-form{margin:0}
+.arena-back{background:#000d;border:1px solid #3a6948;color:var(--accent);font:inherit;font-size:12px;line-height:1.2;padding:7px 12px}
 .immersive .vote-button{top:64px;left:20px;padding:8px 15px;min-height:48px}
 .immersive .video-hint{top:125px;left:22px}
 .immersive .text-contender{font-size:clamp(25px,4.4vw,80px);padding:140px 7% 80px}
@@ -25,14 +29,13 @@ body.immersive{height:100dvh;overflow:hidden;background:#111}
 .contender>video,.preview-item video,.podium-image video,.score-thumb video,video.item-thumbnail{object-fit:contain;object-position:center;background:#111}
 /* A 3px track with a larger transparent hit area for seeking. */
 .video-seek{position:absolute;bottom:0;left:0;right:0;height:18px;z-index:4;opacity:0;transition:opacity .18s;pointer-events:none}
-.contender:hover .video-seek,.contender:focus-within .video-seek{opacity:1;pointer-events:auto}
+.contender.is-playing .video-seek{opacity:1;pointer-events:auto}
 .video-seek progress{position:absolute;bottom:0;left:0;width:100%;height:3px;border:0;border-radius:0;appearance:none;background:#ffffff40;pointer-events:none}
 .video-seek progress::-webkit-progress-bar{background:#ffffff40}
 .video-seek progress::-webkit-progress-value{background:var(--accent)}
 .video-seek progress::-moz-progress-bar{background:var(--accent)}
 .video-seek input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:ew-resize}
 .video-seek:focus-within{outline:1px solid var(--accent);outline-offset:-1px}
-@media(hover:none){.video-seek{opacity:1;pointer-events:auto}}
 /* Saved tournament bracket. The cards also work without the connector script. */
 .bracket-section{margin-top:55px;padding-top:35px;border-top:1px solid var(--line);text-align:left}
 .bracket-section .eyebrow{justify-content:flex-start}.bracket-legend{font-size:12px;color:var(--accent)}
@@ -136,6 +139,7 @@ body.immersive,.contender>video,.preview-item video,.podium-image video,.score-t
 .volume-status{position:fixed;z-index:20;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#000d;border:1px solid var(--line);color:var(--accent);padding:7px 12px;font-size:12px;pointer-events:none}
 .volume-status[hidden]{display:none}
 .contender.is-playing .video-hint{opacity:.5}
+.contender.is-active .vote-button{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 main{min-height:calc(100dvh - 84px)}
 .intro{padding:38px 0 34px;max-width:690px}
 .intro h1,.page-heading h1,.landing h1,.results h1{font-size:clamp(26px,3.3vw,38px);letter-spacing:-.04em;margin:0 0 14px;line-height:1.25}

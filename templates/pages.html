@@ -1,7 +1,7 @@
 {{define "head"}}
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.Title}} · FreeCompare</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
 <body class="{{if .Immersive}}immersive{{end}}">
-{{if .Immersive}}<a class="arena-logo" href="/t/{{.Tournament.ID}}" aria-label="Save and leave tournament">Back</a>{{else}}
+{{if .Immersive}}<nav class="arena-nav" aria-label="Comparison navigation"><a class="arena-logo" href="/" aria-label="Go home">&lt; Go Home</a>{{template "back-control" .}}</nav>{{else}}
 <header class="nav"><a class="brand" href="/">FreeCompare</a><nav><a href="/">Home</a><a class="button small" href="/new">Create tournament</a></nav></header>{{end}}
 <main>
 {{end}}
@@ -9,6 +9,8 @@
 {{define "foot"}}
 </main><dialog id="media-dialog"><button class="close-dialog" aria-label="Close fullscreen">✕</button><div id="expanded-media"></div></dialog><div id="toast" role="status"></div></body></html>
 {{end}}
+
+{{define "back-control"}}{{if .CanBack}}<form class="undo-form" action="/t/{{.Tournament.ID}}/back" method="post"><input type="hidden" name="revision" value="{{.State.Revision}}"><input type="hidden" name="run" value="{{.State.Run}}"><button class="arena-back" type="submit" aria-label="Go back to previous selection">Back</button></form>{{end}}{{end}}
 
 {{define "home"}}{{template "head" .}}
 <section class="intro"><h1>Rank your choices</h1><p>Add names, images or videos, then choose between pairs to find your favourite.</p><a class="button" href="/new">Create tournament</a></section>
@@ -76,25 +78,25 @@
 
 {{define "contender"}}
 <article class="contender {{.Kind}}" data-item="{{.ID}}">
- {{if eq .Kind "image"}}<img src="/media/{{.Media}}" alt="{{if .Title}}{{.Title}}{{else}}Image{{end}}">{{else if eq .Kind "video"}}<video src="/media/{{.Media}}#t=0.001" muted loop playsinline preload="auto"></video><span class="video-hint">Space: switch clip · ↑ / ↓: volume · Tap: play/pause</span>{{else}}<div class="text-contender">{{.Title}}</div>{{end}}
+ {{if eq .Kind "image"}}<img src="/media/{{.Media}}" alt="{{if .Title}}{{.Title}}{{else}}Image{{end}}">{{else if eq .Kind "video"}}<video src="/media/{{.Media}}#t=0.001" muted loop playsinline preload="auto"></video><span class="video-hint">← / →: play clip · Enter: choose · ↑ / ↓: volume</span>{{else}}<div class="text-contender">{{.Title}}</div>{{end}}
  <button class="vote-button" type="submit" name="winner" value="{{.ID}}" aria-label="Choose {{if .Title}}{{.Title}}{{else}}this choice{{end}} as winner">Choose</button>
  {{if .Media}}<button class="expand-button" type="button" data-media="{{.Media}}" data-kind="{{.Kind}}" aria-label="Expand media">⛶</button>{{if .Title}}<div class="contender-title">{{.Title}}</div>{{end}}{{end}}
 </article>{{end}}
 
 {{define "play"}}{{template "head" .}}
-<section class="match-heading"><h1>Choose your favourite</h1><p>{{.Tournament.Name}}{{if eq .State.Mode "endless"}} · Endless · Pass {{.State.Round}}{{else if eq .State.Mode "normal"}} · Normal{{end}} · Match {{.Played}} of {{.Total}}</p><p>← Choose left · → Choose right · Space switches videos · ↑ / ↓ adjusts volume by 20%</p><progress value="{{.State.Index}}" max="{{.Total}}" aria-label="Current round progress"></progress></section>
+<section class="match-heading"><h1>Choose your favourite</h1><p>{{.Tournament.Name}}{{if eq .State.Mode "endless"}} · Endless · Pass {{.State.Round}}{{else if eq .State.Mode "normal"}} · Normal{{end}} · Match {{.Played}} of {{.Total}}</p><p>← Play left · → Play right · Enter chooses the active clip · ↑ / ↓ adjusts volume by 20%</p><progress value="{{.State.Index}}" max="{{.Total}}" aria-label="Current round progress"></progress></section>
 <form class="matchup" action="/t/{{.Tournament.ID}}/vote" method="post"><input type="hidden" name="revision" value="{{.State.Revision}}"><input type="hidden" name="run" value="{{.State.Run}}">{{template "contender" .Left}}<span class="vs match-vs">VS</span>{{template "contender" .Right}}</form>
 <div id="volume-status" class="volume-status" role="status" aria-live="polite" hidden></div>
 {{template "foot" .}}{{end}}
 
 {{define "comparison-done"}}{{template "head" .}}
-<section class="results"><h1>All comparisons complete</h1><p>{{.Tournament.Name}} · You’ve compared all {{.Tournament.Count}} choices.</p><div class="result-actions"><a class="button" href="/t/{{.Tournament.ID}}">Choose a mode</a><a class="text-link" href="/">Home</a></div></section>
+<section class="results"><h1>All comparisons complete</h1><p>{{.Tournament.Name}} · You’ve compared all {{.Tournament.Count}} choices.</p><div class="result-actions">{{template "back-control" .}}<a class="button" href="/t/{{.Tournament.ID}}">Choose a mode</a><a class="text-link" href="/">Home</a></div></section>
 {{template "foot" .}}{{end}}
 
 {{define "results"}}{{template "head" .}}
 <section class="results"><h1>Your results</h1><p>{{.Tournament.Name}}</p>
  <div class="podium">{{range $index,$item := .Podium}}<article class="podium-card rank-{{$index}}"><div class="placement">{{if eq $index 0}}1st place{{else if eq $index 1}}2nd place{{else if eq $index 2}}3rd place{{else}}4th place{{end}}</div><div class="podium-image">{{template "thumb" $item}}</div><h2>{{if $item.Title}}{{$item.Title}}{{else if eq $item.Kind "video"}}Video{{else}}Image{{end}}</h2></article>{{end}}</div>
- <div class="result-actions">{{if .Results.Slides}}<button class="button" type="button" id="open-slideshow">View slideshow</button>{{end}}<button class="button share-button" data-url="/t/{{.Tournament.ID}}" type="button">Copy tournament link</button><a class="button secondary" href="/t/{{.Tournament.ID}}">Play again</a><a class="text-link" href="/">Home</a></div>
+ <div class="result-actions">{{template "back-control" .}}{{if .Results.Slides}}<button class="button" type="button" id="open-slideshow">View slideshow</button>{{end}}<button class="button share-button" data-url="/t/{{.Tournament.ID}}" type="button">Copy tournament link</button><a class="button secondary" href="/t/{{.Tournament.ID}}">Play again</a><a class="text-link" href="/">Home</a></div>
  {{template "bracket" .}}{{template "scoreboard" .}}{{template "slideshow" .}}
 </section>{{template "foot" .}}{{end}}
 

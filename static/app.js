@@ -5,8 +5,11 @@ document.querySelectorAll('.share-button').forEach(button=>button.addEventListen
 const dialog=$('#media-dialog');
 const matchup=$('.matchup');
 const comparisonVideos=[...document.querySelectorAll('.contender video')];
+const comparisonCards=[...document.querySelectorAll('.matchup .contender')];
 const volumeStatus=$('#volume-status');
 let activeVideo=comparisonVideos[0]||null,expandedSource=null,volumeTimer=0,submitted=false;
+let activeCard=activeVideo?.closest('.contender')||comparisonCards[0]||null;
+const markActiveCard=()=>comparisonCards.forEach(card=>card.classList.toggle('is-active',card===activeCard));
 let volume=1,muted=true;
 try{
  const saved=JSON.parse(localStorage.getItem('comparison-sound')||'null');
@@ -25,13 +28,13 @@ const setupSound=video=>{
  });
  video.addEventListener('play',()=>{
   if(video.paused||submitted||document.hidden){video.pause();return;}
-  if(comparisonVideos.includes(video))activeVideo=video;
+  if(comparisonVideos.includes(video)){activeVideo=video;activeCard=video.closest('.contender');markActiveCard();}
   allComparisonVideos().forEach(other=>{if(other!==video)other.pause();});
  });
 };
 const playComparison=video=>{
  if(!video||submitted||document.hidden)return;
- if(comparisonVideos.includes(video))activeVideo=video;
+ if(comparisonVideos.includes(video)){activeVideo=video;activeCard=video.closest('.contender');markActiveCard();}
  allComparisonVideos().forEach(other=>{if(other!==video)other.pause();});
  applySound(video);
  video.play().catch(()=>{
@@ -44,7 +47,8 @@ document.querySelectorAll('.expand-button').forEach(button=>button.addEventListe
  const previous=$('#expanded-media video');
  if(previous&&expandedSource)expandedSource.currentTime=previous.currentTime;
  pauseComparison();
- expandedSource=$('video',button.closest('.contender'));
+ activeCard=button.closest('.contender');markActiveCard();
+ expandedSource=$('video',activeCard);activeVideo=expandedSource;
  const media=document.createElement(button.dataset.kind==='video'?'video':'img');
  media.src='/media/'+button.dataset.media;
  if(media.tagName==='VIDEO'){
@@ -81,7 +85,7 @@ comparisonVideos.forEach(video=>{
  let frame=0;
  const stop=()=>{cancelAnimationFrame(frame);frame=0;update();};
  const tick=()=>{update();if(!video.paused&&!video.ended)frame=requestAnimationFrame(tick);else frame=0;};
- video.addEventListener('play',()=>{card.classList.add('is-playing');if(!frame)frame=requestAnimationFrame(tick);});
+ video.addEventListener('play',()=>{card.classList.toggle('is-playing',!video.paused);if(!video.paused&&!frame)frame=requestAnimationFrame(tick);});
  video.addEventListener('pause',()=>card.classList.remove('is-playing'));
  ['pause','ended','emptied','error'].forEach(event=>video.addEventListener(event,stop));
  ['loadedmetadata','durationchange','timeupdate','seeked'].forEach(event=>video.addEventListener(event,update));
@@ -89,6 +93,11 @@ comparisonVideos.forEach(video=>{
  video.addEventListener('click',()=>{if(video.paused)playComparison(video);else video.pause();});
  update();
 });
+document.querySelectorAll('.undo-form').forEach(form=>form.addEventListener('submit',event=>{
+ if(submitted){event.preventDefault();return;}
+ submitted=true;pauseComparison();
+ form.querySelector('button').disabled=true;
+}));
 if(matchup){
  matchup.addEventListener('submit',event=>{
   event.preventDefault();if(submitted||!event.submitter)return;
@@ -100,17 +109,25 @@ if(matchup){
   setTimeout(()=>HTMLFormElement.prototype.submit.call(matchup),matchMedia('(prefers-reduced-motion: reduce)').matches?0:280);
  });
  document.addEventListener('keydown',event=>{
-  if(event.defaultPrevented||event.ctrlKey||event.altKey||event.metaKey||event.target.isContentEditable||event.target.closest('input,textarea,select,[contenteditable="true"]'))return;
-  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(event.key))return;
+  if(event.defaultPrevented||event.ctrlKey||event.altKey||event.metaKey||event.target.isContentEditable)return;
+  const input=event.target.closest('input,textarea,select,[contenteditable="true"]');
+  if(input&&!(input.matches('input[type="range"]')&&['Enter',' '].includes(event.key)))return;
+  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',' '].includes(event.key))return;
+  if(event.key==='Enter'&&event.target.closest('.arena-nav'))return;
   event.preventDefault();
   if(submitted||event.repeat)return;
   if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
-   matchup.requestSubmit(matchup.querySelectorAll('.vote-button')[event.key==='ArrowLeft'?0:1]);
-  }else if(event.key===' '){
-   const next=comparisonVideos[(comparisonVideos.indexOf(activeVideo)+1)%comparisonVideos.length];
-   if(!next)return;
-   if(dialog.open)next.closest('.contender').querySelector('.expand-button').click();else playComparison(next);
-  }else{
+   activeCard=comparisonCards[event.key==='ArrowLeft'?0:1];
+   activeVideo=$('video',activeCard);markActiveCard();
+   if(dialog.open){
+    const expand=$('.expand-button',activeCard);
+    if(expand)expand.click();else{dialog.close();pauseComparison();}
+   }else if(activeVideo)playComparison(activeVideo);else pauseComparison();
+  }else if(event.key==='Enter'){
+   const playing=dialog.open?$('#expanded-media video'):activeVideo;
+   if(activeVideo&&(!playing||playing.paused))return;
+   if(activeCard)matchup.requestSubmit($('.vote-button',activeCard));
+  }else if(event.key==='ArrowUp'||event.key==='ArrowDown'){
    const video=dialog.open?$('#expanded-media video'):activeVideo;
    if(!video)return;
    const change=event.key==='ArrowUp' ? 0.2 : -0.2;
@@ -119,10 +136,10 @@ if(matchup){
    volumeStatus.textContent=`Volume ${Math.round(volume*100)}%`;volumeStatus.hidden=false;
    clearTimeout(volumeTimer);volumeTimer=setTimeout(()=>volumeStatus.hidden=true,1400);
   }
- });
+ },true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseComparison();});
  window.addEventListener('pagehide',pauseComparison);
- playComparison(activeVideo);
+ markActiveCard();playComparison(activeVideo);
 }
 const form=$('#create-form');
 if(form){

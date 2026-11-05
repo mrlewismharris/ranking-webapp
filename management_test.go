@@ -98,7 +98,7 @@ func TestOwnerEditingAndDeletion(t *testing.T) {
 	if w = request(a, "POST", path+"/edit", editBody(tt, true), a.edit); w.Code != 200 {
 		t.Fatal(w.Body.String())
 	}
-	for _, table := range []string{"games", "results", "votes"} {
+	for _, table := range []string{"game_steps", "games", "results", "votes"} {
 		var n int
 		a.db.QueryRow("SELECT count(*) FROM "+table+" WHERE tournament=?", tt.ID).Scan(&n)
 		if n != 0 {

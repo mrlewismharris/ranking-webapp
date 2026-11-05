@@ -53,6 +53,7 @@ type Match struct {
 	Winner string
 }
 type State struct {
+	UndoReady   bool
 	Mode        string
 	Entrants    []string
 	Run         string
@@ -77,6 +78,7 @@ type Game struct {
 	Podium []string
 }
 type Page struct {
+	CanBack    bool
 	Results    ResultsView
 	Immersive  bool
 	Editing    bool
@@ -147,6 +149,7 @@ func main() {
 	mux.HandleFunc("POST /t/{id}/start", a.start)
 	mux.HandleFunc("GET /t/{id}/play", a.play)
 	mux.HandleFunc("POST /t/{id}/vote", a.vote)
+	mux.HandleFunc("POST /t/{id}/back", a.back)
 	addr := os.Getenv("ADDR")
 	if addr == "" {
 		addr = ":8080"
@@ -688,7 +691,11 @@ func (a *App) start(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		s = State{Mode: mode, Revision: s.Revision + 1, Run: id()}
+		if _, err = tx.Exec("DELETE FROM game_steps WHERE tournament=? AND user=?", tid, user(r)); err != nil {
+			fail(w, err)
+			return
+		}
+		s = State{Mode: mode, Revision: s.Revision + 1, Run: id(), UndoReady: true}
 		if mode == "tournament" {
 			shuffle(ids)
 			buildRound(&s, ids)
@@ -724,6 +731,10 @@ func (a *App) play(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p := Page{Title: t.Name, Tournament: t, State: s, Owner: t.Owner != "" && t.Owner == user(r), Played: s.Index + 1, Total: len(s.Matches)}
+	if err = a.db.QueryRow("SELECT EXISTS(SELECT 1 FROM votes WHERE tournament=? AND user=? AND run=?)", t.ID, user(r), s.Run).Scan(&p.CanBack); err != nil {
+		fail(w, err)
+		return
+	}
 	items := map[string]Item{}
 	for _, i := range t.Items {
 		items[i.ID] = i
@@ -780,6 +791,15 @@ func (a *App) vote(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/t/"+r.PathValue("id")+"/play", 303)
 		return
 	}
+	if err = prepareUndo(tx, r.PathValue("id"), user(r), &s); err != nil {
+		fail(w, err)
+		return
+	}
+	previous, err := json.Marshal(s)
+	if err != nil {
+		fail(w, err)
+		return
+	}
 	// Endless mode replaces its pass at the boundary, so capture the voted pair first.
 	var match Match
 	if s.Phase != "done" && s.Index < len(s.Matches) {
@@ -791,6 +811,10 @@ func (a *App) vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err = tx.Exec("INSERT INTO votes(tournament,user,run,revision,a,b,winner) VALUES(?,?,?,?,?,?,?)", r.PathValue("id"), user(r), s.Run, s.Revision, match.A, match.B, match.Winner); err != nil {
+		fail(w, err)
+		return
+	}
+	if _, err = tx.Exec("INSERT INTO game_steps(tournament,user,run,revision,state) VALUES(?,?,?,?,?)", r.PathValue("id"), user(r), s.Run, s.Revision, string(previous)); err != nil {
 		fail(w, err)
 		return
 	}
